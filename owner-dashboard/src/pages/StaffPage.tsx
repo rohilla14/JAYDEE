@@ -181,6 +181,9 @@ export function StaffPage() {
           <Link className="secondary link-btn" to="/products">
             Products
           </Link>
+          <Link className="secondary link-btn" to="/architecture">
+            Architecture
+          </Link>
           <button type="button" className="secondary" onClick={handleLogout}>
             Log out
           </button>

@@ -273,6 +273,9 @@ export function ProductsPage() {
           <Link className="secondary link-btn" to="/staff">
             Staff
           </Link>
+          <Link className="secondary link-btn" to="/architecture">
+            Architecture
+          </Link>
           <button
             type="button"
             className="primary"

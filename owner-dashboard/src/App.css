@@ -319,6 +319,403 @@ button.secondary {
   margin: 0;
 }
 
+.architecture-page {
+  max-width: 90rem;
+}
+
+.architecture-panel {
+  position: relative;
+}
+
+.architecture-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.85rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+
+.architecture-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1 1 16rem;
+}
+
+.architecture-search input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #d6cfc3;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+}
+
+.architecture-search-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.architecture-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid #d6cfc3;
+  border-radius: 999px;
+  background: #f7f4ef;
+  color: #5c574e;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.filter-chip.is-on {
+  opacity: 1;
+  background: #fff;
+  border-color: #b7aea0;
+}
+
+.architecture-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.architecture-controls .secondary.is-active {
+  background: #3a342c;
+  color: #f7f4ef;
+  border-color: #3a342c;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 1.2rem;
+  background: #d6cfc3;
+  margin: 0 0.15rem;
+}
+
+.architecture-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #5c574e;
+}
+
+.architecture-legend .swatch,
+.filter-chip .swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.15rem;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.swatch-frontend {
+  background: #3b6ea5;
+}
+
+.swatch-backend {
+  background: #6b4f3a;
+}
+
+.swatch-core {
+  background: #8a6238;
+}
+
+.swatch-database {
+  background: #2a7a6c;
+}
+
+.swatch-external {
+  background: #f3f1ec;
+  box-shadow: inset 0 0 0 1.5px #8a8478;
+}
+
+.architecture-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.architecture-stage {
+  position: relative;
+  min-height: 680px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(61, 47, 31, 0.04), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(42, 122, 108, 0.05), transparent 40%),
+    #faf8f4;
+  border: 1px solid #e4ddd2;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.architecture-svg {
+  display: block;
+  width: 100%;
+}
+
+.architecture-svg .arch-links line {
+  transition: stroke-opacity 160ms ease, stroke-width 160ms ease, stroke 160ms ease;
+}
+
+.architecture-svg .arch-links line.is-flowing {
+  stroke-dasharray: 6 5;
+  animation: arch-flow 0.9s linear infinite;
+}
+
+.architecture-svg .arch-halo.is-pulsing {
+  animation: arch-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes arch-flow {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+
+@keyframes arch-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.18);
+  }
+}
+
+.architecture-tooltip {
+  position: absolute;
+  z-index: 3;
+  max-width: 16rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #ddd6ca;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(40, 30, 20, 0.12);
+  pointer-events: none;
+  animation: arch-tip-in 140ms ease-out;
+}
+
+.architecture-tooltip strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.architecture-tooltip p {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+@keyframes arch-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.architecture-detail-panel {
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid #ddd6ca;
+  border-radius: 8px;
+  overflow: auto;
+  max-height: min(920px, calc(100vh - 12rem));
+  animation: arch-tip-in 180ms ease-out;
+}
+
+.architecture-detail-label {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.architecture-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.65rem;
+  align-items: center;
+  margin: 0 0 0.65rem;
+  font-size: 0.85rem;
+}
+
+.architecture-summary {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.architecture-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.architecture-block {
+  margin-bottom: 0.85rem;
+}
+
+.architecture-block h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5c574e;
+}
+
+.architecture-block ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.86rem;
+}
+
+.architecture-block .mono-list {
+  list-style: none;
+  padding-left: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+.architecture-block .mono-list li {
+  padding: 0.2rem 0.35rem;
+  margin-bottom: 0.2rem;
+  background: #f7f4ef;
+  border-radius: 4px;
+  word-break: break-word;
+}
+
+.neighbor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.neighbor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid #ddd6ca;
+  border-radius: 999px;
+  background: #f7f4ef;
+  color: #3a342c;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.neighbor-chip:hover {
+  background: #efe8dc;
+  border-color: #b7aea0;
+}
+
+.neighbor-dir {
+  color: #8a8074;
+  font-weight: 650;
+}
+
+.neighbor-edge {
+  color: #6b645a;
+  font-size: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.pill {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.pill-frontend {
+  background: #3b6ea5;
+}
+
+.pill-backend {
+  background: #6b4f3a;
+}
+
+.pill-core {
+  background: #8a6238;
+}
+
+.pill-database {
+  background: #2a7a6c;
+}
+
+.pill-external {
+  background: #8a8478;
+}
+
+.linkish {
+  border: 0;
+  background: none;
+  color: #3b6ea5;
+  font: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.architecture-hint {
+  position: absolute;
+  left: 0.85rem;
+  bottom: 0.75rem;
+  margin: 0;
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .architecture-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .architecture-detail-panel {
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .architecture-svg .arch-links line.is-flowing,
+  .architecture-svg .arch-halo.is-pulsing,
+  .architecture-tooltip,
+  .architecture-detail-panel {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .stat-grid {
     grid-template-columns: 1fr;
