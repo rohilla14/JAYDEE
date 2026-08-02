@@ -13,6 +13,8 @@ class ProductCreate(BaseModel):
     mrp: Decimal = Field(ge=0, decimal_places=2)
     member_price: Decimal = Field(ge=0, decimal_places=2)
     cost_price: Decimal = Field(ge=0, decimal_places=2)
+    # Seed inventory.quantity on create (default 0) so the counter can stock in one step.
+    initial_quantity: int = Field(default=0, ge=0)
 
 
 # API response shape for a product row: includes id/created_at the client must see,

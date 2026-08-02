@@ -1,10 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.barcodes import generate_barcode
 from app.core.database import get_db
+from app.core.labels import build_bulk_labels_pdf, build_single_label_pdf
 from app.core.security import require_role
 from app.models.category import Category
 from app.models.inventory import Inventory
@@ -15,7 +18,6 @@ from app.schemas.product import (
     BulkThresholdResult,
     InventoryUpdate,
     ProductCreate,
-    ProductRead,
     ProductWithInventory,
 )
 
@@ -25,6 +27,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 # POST /products
 # Creates a new product (and a zero-quantity inventory row so stock can be adjusted later).
 # Tricky: also seeds Inventory — product metadata and stock live in separate tables by design.
+# If barcode is omitted, generate_barcode() assigns SHOP-{prefix}-{seq} under a category lock.
 @router.post(
     "",
     response_model=ProductWithInventory,
@@ -41,35 +44,52 @@ def create_product(
             detail="Category not found",
         )
 
-    if body.barcode is not None:
+    barcode = body.barcode
+    if barcode is not None:
         existing_barcode = db.scalar(
-            select(Product).where(Product.barcode == body.barcode)
+            select(Product).where(Product.barcode == barcode)
         )
         if existing_barcode is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="A product with this barcode already exists",
             )
+    else:
+        barcode = generate_barcode(body.category_id, db)
 
-    product = Product(
-        name=body.name,
-        category_id=body.category_id,
-        barcode=body.barcode,
-        mrp=body.mrp,
-        member_price=body.member_price,
-        cost_price=body.cost_price,
-    )
-    db.add(product)
-    db.flush()
-    db.add(
-        Inventory(
-            product_id=product.id,
-            quantity=0,
-            reorder_threshold=0,
-        )
-    )
-    db.commit()
+    # Retry once if a unique conflict still sneaks past the advisory lock.
+    product: Product | None = None
+    for attempt in range(2):
+        try:
+            product = Product(
+                name=body.name,
+                category_id=body.category_id,
+                barcode=barcode,
+                mrp=body.mrp,
+                member_price=body.member_price,
+                cost_price=body.cost_price,
+            )
+            db.add(product)
+            db.flush()
+            db.add(
+                Inventory(
+                    product_id=product.id,
+                    quantity=body.initial_quantity,
+                    reorder_threshold=0,
+                )
+            )
+            db.commit()
+            break
+        except IntegrityError:
+            db.rollback()
+            if body.barcode is not None or attempt == 1:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="A product with this barcode already exists",
+                )
+            barcode = generate_barcode(body.category_id, db)
 
+    assert product is not None
     return db.scalar(
         select(Product)
         .where(Product.id == product.id)
@@ -80,13 +100,17 @@ def create_product(
 # GET /products
 # Lists products, optionally filtered by category and/or a name/barcode search string.
 # Tricky: search is ILIKE on name OR barcode so one query param covers both scanners and typing.
-@router.get("", response_model=list[ProductRead])
+@router.get("", response_model=list[ProductWithInventory])
 def list_products(
     db: Annotated[Session, Depends(get_db)],
     category_id: Annotated[int | None, Query()] = None,
     search: Annotated[str | None, Query()] = None,
 ) -> list[Product]:
-    stmt = select(Product).order_by(Product.id)
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.inventory))
+        .order_by(Product.id)
+    )
     if category_id is not None:
         stmt = stmt.where(Product.category_id == category_id)
     if search:
@@ -169,6 +193,64 @@ def get_product_by_barcode(
     return product
 
 
+# GET /products/labels-pdf?ids=1,2,3
+# Bulk label sheet (tiled 50x30mm labels on A4) for office-printer testing.
+# Tricky: static path must be registered before /{product_id} routes.
+@router.get("/labels-pdf")
+def products_labels_pdf(
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_role(UserRole.OWNER, UserRole.STOCK_STAFF))],
+    ids: Annotated[str, Query(description="Comma-separated product ids")],
+) -> Response:
+    try:
+        product_ids = [int(part.strip()) for part in ids.split(",") if part.strip()]
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="ids must be a comma-separated list of integers",
+        ) from exc
+
+    if not product_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one product id is required",
+        )
+
+    products = list(
+        db.scalars(
+            select(Product)
+            .where(Product.id.in_(product_ids))
+            .order_by(Product.id)
+        ).all()
+    )
+    found = {p.id for p in products}
+    missing = [pid for pid in product_ids if pid not in found]
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product(s) not found: {missing}",
+        )
+
+    # Preserve caller order so printed sheets match the requested id list.
+    by_id = {p.id: p for p in products}
+    ordered = [by_id[pid] for pid in product_ids]
+    for product in ordered:
+        if not product.barcode:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Product {product.id} has no barcode to print",
+            )
+
+    pdf = build_bulk_labels_pdf(ordered)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="product-labels.pdf"',
+        },
+    )
+
+
 # GET /products/{product_id}
 # Fetches one product by id, including its current inventory quantity.
 # Tricky: uses selectinload so inventory is available for ProductWithInventory without lazy-load surprises.
@@ -188,6 +270,36 @@ def get_product(
             detail="Product not found",
         )
     return product
+
+
+# GET /products/{product_id}/label-pdf
+# Single ~50x30mm thermal label PDF with Code128, name, and MRP.
+@router.get("/{product_id}/label-pdf")
+def product_label_pdf(
+    product_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_role(UserRole.OWNER, UserRole.STOCK_STAFF))],
+) -> Response:
+    product = db.get(Product, product_id)
+    if product is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+    if not product.barcode:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Product has no barcode to print",
+        )
+
+    pdf = build_single_label_pdf(product)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="product-{product_id}-label.pdf"',
+        },
+    )
 
 
 # PATCH /products/{product_id}/stock

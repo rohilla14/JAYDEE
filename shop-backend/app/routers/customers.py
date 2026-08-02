@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Annotated
 
@@ -14,6 +15,7 @@ from app.schemas.customer import (
     CustomerRead,
     RedeemPointsRequest,
     RedeemPointsResponse,
+    WhatsAppOptInUpdate,
 )
 
 router = APIRouter(prefix="/customers", tags=["customers"])
@@ -38,12 +40,15 @@ def create_customer(
             detail="A customer with this phone number already exists",
         )
 
+    opted_in_at = datetime.now(timezone.utc) if body.whatsapp_opt_in else None
     customer = Customer(
         name=body.name,
         phone=body.phone,
         tier=CustomerTier.BRONZE,
         points_balance=0,
         lifetime_spend=Decimal("0.00"),
+        whatsapp_opt_in=body.whatsapp_opt_in,
+        whatsapp_opt_in_at=opted_in_at,
     )
     db.add(customer)
     db.commit()
@@ -81,6 +86,31 @@ def get_customer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found",
         )
+    return customer
+
+
+# PATCH /customers/{customer_id}/whatsapp-opt-in
+# Update WhatsApp marketing consent on a later visit (opt in or out).
+@router.patch("/{customer_id}/whatsapp-opt-in", response_model=CustomerRead)
+def update_whatsapp_opt_in(
+    customer_id: int,
+    body: WhatsAppOptInUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_role(UserRole.OWNER, UserRole.BILLING_STAFF))],
+) -> Customer:
+    customer = db.get(Customer, customer_id)
+    if customer is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found",
+        )
+
+    customer.whatsapp_opt_in = body.opt_in
+    if body.opt_in:
+        # Fresh consent time — needed for audit / provider compliance windows.
+        customer.whatsapp_opt_in_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(customer)
     return customer
 
 

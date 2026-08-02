@@ -5,13 +5,20 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import create_access_token, hash_password, verify_password
-from app.models.user import User
+from app.core.security import (
+    create_access_token,
+    hash_password,
+    require_role,
+    verify_password,
+)
+from app.models.user import User, UserRole
 from app.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+# POST /auth/register
+# Owner-only staff creation — keeps curl/self-serve registration from minting arbitrary roles.
 @router.post(
     "/register",
     response_model=UserResponse,
@@ -20,6 +27,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(
     body: UserRegister,
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_role(UserRole.OWNER))],
 ) -> User:
     existing = db.scalar(select(User).where(User.phone == body.phone))
     if existing is not None:
@@ -33,6 +41,7 @@ def register(
         phone=body.phone,
         password_hash=hash_password(body.password),
         role=body.role,
+        is_active=True,
     )
     db.add(user)
     db.commit()
@@ -50,6 +59,12 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect phone or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is deactivated",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

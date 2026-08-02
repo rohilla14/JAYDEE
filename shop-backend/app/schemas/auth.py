@@ -29,4 +29,5 @@ class UserResponse(BaseModel):
     name: str
     phone: str
     role: UserRole
+    is_active: bool
     created_at: datetime

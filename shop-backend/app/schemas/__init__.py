@@ -1,6 +1,12 @@
 from app.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse
 from app.schemas.bill import BillCreate, BillItemCreate, BillItemRead, BillRead
-from app.schemas.customer import CustomerCreate, CustomerRead, RedeemPointsRequest, RedeemPointsResponse
+from app.schemas.customer import (
+    CustomerCreate,
+    CustomerRead,
+    RedeemPointsRequest,
+    RedeemPointsResponse,
+    WhatsAppOptInUpdate,
+)
 from app.schemas.product import (
     InventoryQuantity,
     InventoryUpdate,
@@ -27,4 +33,5 @@ __all__ = [
     "UserLogin",
     "UserRegister",
     "UserResponse",
+    "WhatsAppOptInUpdate",
 ]

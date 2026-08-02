@@ -1,52 +1,41 @@
-# JAYDEE — Shop Management System
+# Shop Management API
 
-A FastAPI backend for managing a shop, built with raw SQLAlchemy 2.0.
+FastAPI + SQLAlchemy 2 + Alembic + PostgreSQL.
 
-## Setup
+Full monorepo setup (all apps): see the root [README.md](../README.md).
 
-1. Create and activate a virtual environment:
+## Quick start
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate   # macOS / Linux
-   ```
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cp .env.example .env        # edit DATABASE_URL + JWT_SECRET
+createdb shop_db            # if needed
+alembic upgrade head
+python scripts/create_owner.py --name "Owner" --phone "9000000001" --password "changeme123"
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-2. Install dependencies:
+- Health: http://127.0.0.1:8000/health
+- Swagger: http://127.0.0.1:8000/docs
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Useful scripts
 
-3. Copy the example env file and edit values:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-4. Make sure PostgreSQL is running and the database exists.
-
-5. Run migrations (once models are defined):
-
-   ```bash
-   alembic upgrade head
-   ```
-
-6. Start the dev server:
-
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-7. Check the health endpoint: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+| Script | Purpose |
+|--------|---------|
+| `scripts/create_owner.py` | Bootstrap first owner (API register is owner-only) |
+| `scripts/set_default_thresholds.py` | Set reorder thresholds to ~20% of stock (min 2) |
 
 ## Project structure
 
 ```
 shop-backend/
   app/
-    core/       # config, database engine, shared infrastructure
-    models/     # SQLAlchemy ORM models
-    schemas/    # Pydantic request/response schemas
-    routers/    # API route handlers
-  alembic/      # database migration scripts
+    core/       # config, DB, auth, barcodes, labels, WhatsApp stub
+    models/     # SQLAlchemy ORM
+    schemas/    # Pydantic
+    routers/    # HTTP routes
+  alembic/      # migrations
+  scripts/      # one-off ops helpers
 ```

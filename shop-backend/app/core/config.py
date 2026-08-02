@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     JWT_SECRET: str
-
+    # stub | gupshup | interakt (real providers raise NotImplemented until wired)
+    WHATSAPP_PROVIDER: str = "stub"
 
 settings = Settings()
