@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/auth'
 import {
   ApiError,
@@ -87,6 +87,12 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="header-actions">
+          <Link className="secondary link-btn" to="/products">
+            Products
+          </Link>
+          <Link className="secondary link-btn" to="/staff">
+            Staff
+          </Link>
           <button
             type="button"
             className="primary"
