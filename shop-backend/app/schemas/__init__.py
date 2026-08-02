@@ -1,4 +1,6 @@
 from app.schemas.auth import TokenResponse, UserLogin, UserRegister, UserResponse
+from app.schemas.bill import BillCreate, BillItemCreate, BillItemRead, BillRead
+from app.schemas.customer import CustomerCreate, CustomerRead, RedeemPointsRequest, RedeemPointsResponse
 from app.schemas.product import (
     InventoryQuantity,
     InventoryUpdate,
@@ -8,11 +10,19 @@ from app.schemas.product import (
 )
 
 __all__ = [
+    "BillCreate",
+    "BillItemCreate",
+    "BillItemRead",
+    "BillRead",
+    "CustomerCreate",
+    "CustomerRead",
     "InventoryQuantity",
     "InventoryUpdate",
     "ProductCreate",
     "ProductRead",
     "ProductWithInventory",
+    "RedeemPointsRequest",
+    "RedeemPointsResponse",
     "TokenResponse",
     "UserLogin",
     "UserRegister",

@@ -11,6 +11,8 @@ from app.models.inventory import Inventory
 from app.models.product import Product
 from app.models.user import User, UserRole
 from app.schemas.product import (
+    BulkThresholdItem,
+    BulkThresholdResult,
     InventoryUpdate,
     ProductCreate,
     ProductRead,
@@ -93,6 +95,57 @@ def list_products(
             Product.name.ilike(pattern) | Product.barcode.ilike(pattern)
         )
     return list(db.scalars(stmt).all())
+
+
+# PATCH /products/bulk-threshold
+# Sets reorder_threshold on many inventory rows in one request (owner dashboard / seed scripts).
+# Tricky: declared before /{product_id} routes so "bulk-threshold" is never parsed as an id.
+@router.patch("/bulk-threshold", response_model=list[BulkThresholdResult])
+def bulk_update_thresholds(
+    body: list[BulkThresholdItem],
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_role(UserRole.OWNER))],
+) -> list[BulkThresholdResult]:
+    if not body:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one product threshold is required",
+        )
+
+    product_ids = [item.product_id for item in body]
+    if len(product_ids) != len(set(product_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Duplicate product_id in request",
+        )
+
+    inventories = {
+        inv.product_id: inv
+        for inv in db.scalars(
+            select(Inventory).where(Inventory.product_id.in_(product_ids))
+        ).all()
+    }
+    missing = [pid for pid in product_ids if pid not in inventories]
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Inventory not found for product_id(s): {missing}",
+        )
+
+    results: list[BulkThresholdResult] = []
+    for item in body:
+        inv = inventories[item.product_id]
+        inv.reorder_threshold = item.reorder_threshold
+        results.append(
+            BulkThresholdResult(
+                product_id=item.product_id,
+                quantity=inv.quantity,
+                reorder_threshold=inv.reorder_threshold,
+            )
+        )
+
+    db.commit()
+    return results
 
 
 # GET /products/barcode/{barcode}

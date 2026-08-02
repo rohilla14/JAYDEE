@@ -30,11 +30,12 @@ class ProductRead(BaseModel):
     created_at: datetime
 
 
-# Tiny nested payload so ProductWithInventory can expose stock without the full Inventory table row.
+# Nested stock fields for ProductWithInventory — quantity for display/alerts, threshold for low-stock UI.
 class InventoryQuantity(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     quantity: int
+    reorder_threshold: int
 
 
 # ProductRead plus current stock: joins product + inventory for the API, whereas the ORM
@@ -47,3 +48,16 @@ class ProductWithInventory(ProductRead):
 # SQLAlchemy Inventory model, so callers cannot accidentally overwrite stock blindly.
 class InventoryUpdate(BaseModel):
     delta: int
+
+
+# One product's reorder threshold for bulk updates (owner dashboard / seed scripts).
+class BulkThresholdItem(BaseModel):
+    product_id: int
+    reorder_threshold: int = Field(ge=0)
+
+
+# Response row after a bulk threshold update — confirms what was written, not full product metadata.
+class BulkThresholdResult(BaseModel):
+    product_id: int
+    quantity: int
+    reorder_threshold: int

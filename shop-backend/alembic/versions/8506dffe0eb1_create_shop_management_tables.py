@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -17,23 +18,27 @@ down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+user_role = postgresql.ENUM(
+    "owner",
+    "billing_staff",
+    "stock_staff",
+    name="user_role",
+    create_type=False,
+)
+customer_tier = postgresql.ENUM(
+    "bronze",
+    "silver",
+    "gold",
+    name="customer_tier",
+    create_type=False,
+)
+
 
 def upgrade() -> None:
     """Upgrade schema."""
-    user_role = sa.Enum(
-        "owner",
-        "billing_staff",
-        "stock_staff",
-        name="user_role",
-    )
-    customer_tier = sa.Enum(
-        "bronze",
-        "silver",
-        "gold",
-        name="customer_tier",
-    )
-    user_role.create(op.get_bind(), checkfirst=True)
-    customer_tier.create(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    user_role.create(bind, checkfirst=True)
+    customer_tier.create(bind, checkfirst=True)
 
     op.create_table(
         "users",
@@ -41,17 +46,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("phone", sa.String(length=20), nullable=False),
         sa.Column("password_hash", sa.String(length=255), nullable=False),
-        sa.Column(
-            "role",
-            sa.Enum(
-                "owner",
-                "billing_staff",
-                "stock_staff",
-                name="user_role",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("role", user_role, nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -71,17 +66,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("phone", sa.String(length=20), nullable=False),
-        sa.Column(
-            "tier",
-            sa.Enum(
-                "bronze",
-                "silver",
-                "gold",
-                name="customer_tier",
-                create_type=False,
-            ),
-            nullable=False,
-        ),
+        sa.Column("tier", customer_tier, nullable=False),
         sa.Column("points_balance", sa.Integer(), nullable=False),
         sa.Column("lifetime_spend", sa.Numeric(precision=12, scale=2), nullable=False),
         sa.Column(
@@ -168,5 +153,5 @@ def downgrade() -> None:
     op.drop_table("customers")
     op.drop_table("categories")
     op.drop_table("users")
-    sa.Enum(name="customer_tier").drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name="user_role").drop(op.get_bind(), checkfirst=True)
+    customer_tier.drop(op.get_bind(), checkfirst=True)
+    user_role.drop(op.get_bind(), checkfirst=True)
