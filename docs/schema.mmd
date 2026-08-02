@@ -1,0 +1,71 @@
+erDiagram
+    users {
+        int id PK
+        string name
+        string phone
+        string password_hash
+        enum role "owner | billing_staff | stock_staff"
+        boolean is_active
+        timestamptz created_at
+    }
+
+    categories {
+        int id PK
+        string name
+    }
+
+    products {
+        int id PK
+        string name
+        int category_id FK
+        string barcode UK "nullable, unique"
+        numeric mrp "Numeric(10,2)"
+        numeric member_price "Numeric(10,2)"
+        numeric cost_price "Numeric(10,2)"
+        timestamptz created_at
+    }
+
+    inventory {
+        int id PK
+        int product_id FK "unique — 1:1 with products"
+        int quantity
+        int reorder_threshold
+        timestamptz updated_at
+    }
+
+    customers {
+        int id PK
+        string name
+        string phone UK
+        enum tier "bronze | silver | gold"
+        int points_balance
+        numeric lifetime_spend "Numeric(12,2)"
+        boolean whatsapp_opt_in
+        timestamptz whatsapp_opt_in_at "nullable"
+        timestamptz created_at
+    }
+
+    bills {
+        int id PK
+        int customer_id FK "nullable — walk-in allowed"
+        int staff_id FK
+        numeric total_amount "Numeric(12,2)"
+        numeric discount_amount "Numeric(12,2)"
+        timestamptz created_at
+    }
+
+    bill_items {
+        int id PK
+        int bill_id FK
+        int product_id FK
+        int quantity
+        numeric unit_price "Numeric(10,2)"
+        numeric line_total "Numeric(12,2)"
+    }
+
+    categories ||--o{ products : "has"
+    products ||--o| inventory : "stocked as"
+    products ||--o{ bill_items : "sold in"
+    customers ||--o{ bills : "optional on"
+    users ||--o{ bills : "rings up"
+    bills ||--|{ bill_items : "contains"
